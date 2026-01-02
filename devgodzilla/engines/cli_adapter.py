@@ -67,7 +67,7 @@ def run_cli_command(
             proc = subprocess.Popen(
                 cmd,
                 cwd=cwd,
-                stdin=subprocess.PIPE if input_text is not None else None,
+                stdin=subprocess.PIPE if input_text is not None else subprocess.DEVNULL,
                 stdout=subprocess.PIPE if capture else None,
                 stderr=subprocess.PIPE if capture else None,
                 text=True,
@@ -138,15 +138,26 @@ def run_cli_command(
                 metadata={"cmd": cmd[0]},
             )
 
-        proc = subprocess.run(
-            cmd,
-            cwd=cwd,
-            input=input_text,
-            timeout=timeout,
-            capture_output=capture_output,
-            text=True,
-            env=proc_env,
-        )
+        if input_text is None:
+            proc = subprocess.run(
+                cmd,
+                cwd=cwd,
+                stdin=subprocess.DEVNULL,
+                timeout=timeout,
+                capture_output=capture_output,
+                text=True,
+                env=proc_env,
+            )
+        else:
+            proc = subprocess.run(
+                cmd,
+                cwd=cwd,
+                input=input_text,
+                timeout=timeout,
+                capture_output=capture_output,
+                text=True,
+                env=proc_env,
+            )
 
         duration = time.time() - start_time
 

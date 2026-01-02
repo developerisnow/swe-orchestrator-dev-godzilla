@@ -254,47 +254,41 @@ class SpecificationService(Service):
             specs_dir.mkdir(parents=True, exist_ok=True)
 
             speckit_source = self._resolve_speckit_source()
-            if not speckit_source or not speckit_source.exists():
-                return SpecKitResult(
-                    success=False,
-                    project_id=project_id,
-                    error="SpecKit source not found; ensure Origins/spec-kit is present.",
-                )
-            missing_assets = []
-            for required in ("templates", "scripts"):
-                if not (speckit_source / required).exists():
-                    missing_assets.append(required)
-            if missing_assets:
-                return SpecKitResult(
-                    success=False,
-                    project_id=project_id,
-                    error=f"SpecKit source missing assets: {', '.join(missing_assets)}",
-                )
+            use_vendored = bool(speckit_source and speckit_source.exists())
+            missing_assets: list[str] = []
+            has_constitution_template = False
+            if use_vendored:
+                has_constitution_template = bool((speckit_source / "memory" / "constitution.md").exists())
+                for required in ("templates", "scripts"):
+                    if not (speckit_source / required).exists():
+                        missing_assets.append(required)
+                if missing_assets or not has_constitution_template:
+                    use_vendored = False
 
             constitution_path = specify_path / self.MEMORY_DIR / "constitution.md"
             if constitution_content:
                 constitution_path.write_text(constitution_content)
-            elif speckit_source and (speckit_source / "memory" / "constitution.md").exists():
+            elif use_vendored and speckit_source:
                 self._copy_file_if_missing(
                     speckit_source / "memory" / "constitution.md",
                     constitution_path,
                 )
             else:
-                return SpecKitResult(
-                    success=False,
-                    project_id=project_id,
-                    error="SpecKit constitution template not found in source.",
+                self._create_default_constitution(constitution_path)
+
+            if use_vendored and speckit_source:
+                self._copy_dir_contents(
+                    speckit_source / "templates",
+                    specify_path / self.TEMPLATES_DIR,
                 )
 
-            self._copy_dir_contents(
-                speckit_source / "templates",
-                specify_path / self.TEMPLATES_DIR,
-            )
-
-            self._copy_dir_contents(
-                speckit_source / "scripts",
-                specify_path / "scripts",
-            )
+                self._copy_dir_contents(
+                    speckit_source / "scripts",
+                    specify_path / "scripts",
+                )
+            else:
+                self._create_default_templates(specify_path / self.TEMPLATES_DIR)
+                (specify_path / "scripts").mkdir(parents=True, exist_ok=True)
 
             constitution_hash = self._compute_constitution_hash(specify_path)
 

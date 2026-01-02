@@ -275,11 +275,23 @@ class AgentConfigService(Service):
     def _resolve_agents_map(self, project_id: Optional[int | str]) -> Dict[str, AgentConfig]:
         self.load_config()
         resolved: Dict[str, AgentConfig] = {}
-        for agent_id, agent in self._agents.items():
-            resolved[agent_id] = replace(agent)
 
-        project_agents = self._get_agent_overrides(project_id)
-        for agent_id, agent_data in project_agents.items():
+        overrides = self._get_project_overrides(project_id)
+        inherit = self._inherit_project(overrides)
+        if inherit:
+            for agent_id, agent in self._agents.items():
+                resolved[agent_id] = replace(agent)
+
+        project_agents = overrides.get("agents") or {}
+        if isinstance(project_agents, dict):
+            for agent_id, agent_data in project_agents.items():
+                if not isinstance(agent_data, dict):
+                    continue
+                base = resolved.get(agent_id)
+                resolved[agent_id] = self._parse_agent(agent_id, agent_data, base=base)
+
+        db_overrides = self._get_agent_overrides(project_id)
+        for agent_id, agent_data in db_overrides.items():
             if not isinstance(agent_data, dict):
                 continue
             base = resolved.get(agent_id)
@@ -322,7 +334,8 @@ class AgentConfigService(Service):
         try:
             db = self._get_db()
             project_value = int(project_id) if project_id is not None else None
-            return db.list_agent_assignments(project_value)
+            assignments = db.list_agent_assignments(project_value)
+            return assignments if isinstance(assignments, dict) else {}
         except Exception:
             return {}
 
