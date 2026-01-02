@@ -379,7 +379,7 @@ CREATE TABLE IF NOT EXISTS protocol_runs (
     policy_effective_json JSONB,
     windmill_flow_id TEXT,
     speckit_metadata JSONB,
-    linked_sprint_id INTEGER REFERENCES sprints(id),
+    linked_sprint_id INTEGER,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -447,7 +447,7 @@ CREATE TABLE IF NOT EXISTS step_runs (
     depends_on JSONB DEFAULT '[]',
     parallel_group TEXT,
     assigned_agent TEXT,
-    linked_task_id INTEGER REFERENCES tasks(id),
+    linked_task_id INTEGER,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -641,4 +641,27 @@ CREATE TABLE IF NOT EXISTS tasks (
 );
 CREATE INDEX IF NOT EXISTS idx_tasks_project ON tasks(project_id, board_status);
 CREATE INDEX IF NOT EXISTS idx_tasks_sprint ON tasks(sprint_id);
+
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint WHERE conname = 'protocol_runs_linked_sprint_id_fkey'
+    ) THEN
+        ALTER TABLE protocol_runs
+            ADD CONSTRAINT protocol_runs_linked_sprint_id_fkey
+            FOREIGN KEY (linked_sprint_id) REFERENCES sprints(id);
+    END IF;
+END $$;
+
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint WHERE conname = 'step_runs_linked_task_id_fkey'
+    ) THEN
+        ALTER TABLE step_runs
+            ADD CONSTRAINT step_runs_linked_task_id_fkey
+            FOREIGN KEY (linked_task_id) REFERENCES tasks(id);
+    END IF;
+END $$;
+
 """
