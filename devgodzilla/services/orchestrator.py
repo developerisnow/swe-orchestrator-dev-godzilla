@@ -550,6 +550,7 @@ class OrchestratorService(Service):
         elif self.quality_service:
             # Local mode
             job_run_id = str(uuid.uuid4())
+            event_bus = get_event_bus()
             try:
                 step = self.db.get_step_run(step_run_id)
                 prun = self.db.get_protocol_run(step.protocol_run_id)

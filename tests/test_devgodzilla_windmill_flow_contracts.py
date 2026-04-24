@@ -73,7 +73,14 @@ def test_spec_to_protocol_flow_reuses_implement_bootstrap_protocol() -> None:
     assert "create_protocol" not in module_by_id
 
     protocol_start = module_by_id["protocol_start"]
-    protocol_expr = protocol_start["input_transforms"]["protocol_run_id"]["expr"]
+    assert protocol_start["value"]["type"] == "branchone"
+    run_branch = next(
+        branch
+        for branch in protocol_start["value"]["branches"]
+        if "protocol_id != null" in branch["expr"] and branch["modules"]
+    )
+    protocol_plan = next(module for module in run_branch["modules"] if module["id"] == "protocol_plan_and_wait")
+    protocol_expr = protocol_plan["input_transforms"]["protocol_run_id"]["expr"]
     assert protocol_expr == "results.speckit_implement.protocol_id"
 
 

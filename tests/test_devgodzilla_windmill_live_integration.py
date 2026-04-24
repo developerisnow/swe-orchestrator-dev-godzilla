@@ -246,8 +246,16 @@ def test_live_windmill_stack_end_to_end() -> None:
         assert "protocol_start" in module_ids
         module_by_id = {module["id"]: module for module in modules}
         assert module_by_id["speckit_specify"]["value"]["input_transforms"]["project_id"]["expr"] == "flow_input.project_id"
+        protocol_start = module_by_id["protocol_start"]
+        assert protocol_start["value"]["type"] == "branchone"
+        run_branch = next(
+            branch
+            for branch in protocol_start["value"]["branches"]
+            if "protocol_id != null" in branch["expr"] and branch["modules"]
+        )
+        protocol_plan = next(module for module in run_branch["modules"] if module["id"] == "protocol_plan_and_wait")
         assert (
-            module_by_id["protocol_start"]["value"]["input_transforms"]["protocol_run_id"]["expr"]
+            protocol_plan["input_transforms"]["protocol_run_id"]["expr"]
             == "results.speckit_implement.protocol_id"
         )
 
