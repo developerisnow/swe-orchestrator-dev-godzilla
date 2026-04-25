@@ -26,6 +26,25 @@ command_exists() {
   command -v "$1" >/dev/null 2>&1
 }
 
+prepend_user_local_bin() {
+  if [[ -d "$HOME/.local/bin" ]]; then
+    case ":$PATH:" in
+      *":$HOME/.local/bin:"*) ;;
+      *) export PATH="$HOME/.local/bin:$PATH" ;;
+    esac
+  fi
+}
+
+load_local_env() {
+  local local_env="$PROJECT_DIR/.env.local"
+  if [[ -f "$local_env" ]]; then
+    set -a
+    # shellcheck disable=SC1090
+    source "$local_env"
+    set +a
+  fi
+}
+
 run_pnpm() {
   if command_exists pnpm; then
     pnpm "$@"
@@ -66,6 +85,8 @@ python_bin() {
 }
 
 export_env() {
+  load_local_env
+  prepend_user_local_bin
   export DEVGODZILLA_DB_URL="${DEVGODZILLA_DB_URL:-postgresql://devgodzilla:changeme@localhost:5432/devgodzilla_db}"
   export DEVGODZILLA_LOG_LEVEL="${DEVGODZILLA_LOG_LEVEL:-DEBUG}"
   export DEVGODZILLA_WINDMILL_URL="${DEVGODZILLA_WINDMILL_URL:-http://localhost:8001}"

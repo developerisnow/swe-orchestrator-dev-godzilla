@@ -5,6 +5,8 @@ OpenAI Codex CLI engine adapter.
 """
 
 import os
+import subprocess
+import shutil
 from pathlib import Path
 from typing import List, Optional
 
@@ -109,9 +111,9 @@ class CodexEngine(CLIEngine):
         """
         Check if Codex CLI can run in this environment.
 
-        In addition to the binary being present, Codex typically requires an API key.
-        Set `DEVGODZILLA_ASSUME_AGENT_AUTH=true` to bypass the key check (e.g. local
-        configs/credential helpers).
+        Codex supports either API-key auth or the CLI's ChatGPT login stored in
+        ``$HOME/.codex/auth.json``. Set ``DEVGODZILLA_ASSUME_AGENT_AUTH=true`` to
+        bypass the auth check for tests or externally managed credentials.
         """
         if not super().check_availability():
             return False
@@ -119,7 +121,37 @@ class CodexEngine(CLIEngine):
         if os.environ.get("DEVGODZILLA_ASSUME_AGENT_AUTH", "").lower() in ("1", "true", "yes", "on"):
             return True
 
-        return bool(os.environ.get("OPENAI_API_KEY"))
+        if os.environ.get("OPENAI_API_KEY"):
+            return True
+
+        cmd_path = self._resolve_command_path()
+        try:
+            result = subprocess.run(
+                [cmd_path, "login", "status"],
+                capture_output=True,
+                text=True,
+                timeout=10,
+                check=False,
+            )
+        except Exception as exc:  # noqa: BLE001
+            logger.debug("codex_login_status_check_failed", extra={"error": str(exc)})
+            return False
+
+        status_text = f"{result.stdout or ''}\n{result.stderr or ''}".lower()
+        return result.returncode == 0 and "not logged in" not in status_text
+
+    def _resolve_command_path(self) -> str:
+        """Resolve codex from PATH or the same extra dirs used by CLIEngine."""
+        cmd_name = self._get_command_name()
+        path = shutil.which(cmd_name)
+        if path:
+            return path
+
+        for directory in self._SYSTEM_CLI_PATHS + self._extra_cli_dirs():
+            candidate = os.path.join(directory, cmd_name)
+            if os.path.isfile(candidate) and os.access(candidate, os.X_OK):
+                return candidate
+        return cmd_name
 
 
 def register_codex_engine(*, default: bool = True) -> CodexEngine:

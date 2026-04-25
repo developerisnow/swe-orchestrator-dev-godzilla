@@ -1,6 +1,7 @@
 """Tests for all agent adapters."""
 
 import os
+import subprocess
 from pathlib import Path
 from unittest.mock import patch
 
@@ -11,6 +12,57 @@ from devgodzilla.engines.interface import (
     EngineRequest,
     SandboxMode,
 )
+
+
+class TestCodexEngine:
+    """Tests for Codex CLI engine adapter."""
+
+    def test_codex_engine_check_availability_with_api_key(self):
+        """Codex is available when the binary exists and OPENAI_API_KEY is set."""
+        from devgodzilla.engines.codex import CodexEngine
+
+        engine = CodexEngine()
+        with (
+            patch("shutil.which", return_value="/usr/bin/codex"),
+            patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"}, clear=True),
+        ):
+            assert engine.check_availability() is True
+
+    def test_codex_engine_check_availability_with_chatgpt_login(self):
+        """Codex is available when `codex login status` reports ChatGPT login."""
+        from devgodzilla.engines.codex import CodexEngine
+
+        engine = CodexEngine()
+        status = subprocess.CompletedProcess(
+            ["codex", "login", "status"],
+            0,
+            stdout="Logged in using ChatGPT\n",
+            stderr="",
+        )
+        with (
+            patch("shutil.which", return_value="/usr/bin/codex"),
+            patch("devgodzilla.engines.codex.subprocess.run", return_value=status),
+            patch.dict(os.environ, {}, clear=True),
+        ):
+            assert engine.check_availability() is True
+
+    def test_codex_engine_check_availability_without_auth(self):
+        """Codex is unavailable when neither API key nor CLI login is present."""
+        from devgodzilla.engines.codex import CodexEngine
+
+        engine = CodexEngine()
+        status = subprocess.CompletedProcess(
+            ["codex", "login", "status"],
+            1,
+            stdout="Not logged in\n",
+            stderr="",
+        )
+        with (
+            patch("shutil.which", return_value="/usr/bin/codex"),
+            patch("devgodzilla.engines.codex.subprocess.run", return_value=status),
+            patch.dict(os.environ, {}, clear=True),
+        ):
+            assert engine.check_availability() is False
 
 
 class TestQoderEngine:

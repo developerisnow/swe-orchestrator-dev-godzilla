@@ -223,3 +223,64 @@ Common environment variables:
 | `WINDMILL_JOB_TIMEOUT_SECONDS` | Windmill job timeout used by local compose files |
 
 Current default CLI agent configuration is defined in `devgodzilla/config/agents.yaml`.
+
+`scripts/run-local-dev.sh` also sources `.env.local` when it exists. Keep that
+file local-only for host-specific defaults, for example:
+
+```bash
+DEVGODZILLA_DEFAULT_ENGINE_ID=codex
+# Optional when you want to override config/agents.yaml:
+# DEVGODZILLA_CODEX_MODEL=gpt-4.1
+```
+
+### Codex CLI Auth
+
+DevGodzilla runs Codex through the `codex` CLI declared in
+`devgodzilla/config/agents.yaml`. Install it on host-backed runtimes with a
+user-local prefix so the backend can find it without root-level package changes:
+
+```bash
+npm install -g --prefix "$HOME/.local" @openai/codex
+codex --version
+```
+
+`scripts/run-local-dev.sh` prepends `$HOME/.local/bin` to `PATH` before starting
+the backend, so a user-local `codex` install is enough for `/agents/health`.
+
+Codex supports both API-key auth and ChatGPT subscription auth through the CLI.
+For ChatGPT subscription auth, log in on the runtime host and verify the login:
+
+```bash
+codex login
+codex login status
+```
+
+The CLI stores ChatGPT login credentials outside this repo at:
+
+```text
+$HOME/.codex/auth.json
+```
+
+Do not commit or copy this file into the repository. If you re-authorize Codex
+on the same server with another account, run the Codex login flow on that server
+and restart the backend so the next agent process reads the refreshed file. If
+you authorize on another machine and want this runtime to use that subscription,
+copy only the new `auth.json` into `$HOME/.codex/auth.json` on the runtime host
+using a private channel such as `scp`, then restart the backend. Treat the file
+as a secret-bearing credential.
+
+`codex login status` only proves that a local credential file exists. To prove
+that the subscription/workspace can execute Codex, run a tiny smoke:
+
+```bash
+codex exec --ephemeral --cd /tmp --sandbox read-only --skip-git-repo-check \
+  "Print exactly: codex-smoke-ok"
+```
+
+If the smoke returns `402 Payment Required` with `deactivated_workspace`, the
+runtime is logged in but the selected ChatGPT workspace/subscription cannot use
+Codex. Re-authorize with an active account or use API-key auth:
+
+```bash
+printenv OPENAI_API_KEY | codex login --with-api-key
+```
