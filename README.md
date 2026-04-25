@@ -230,7 +230,7 @@ file local-only for host-specific defaults, for example:
 ```bash
 DEVGODZILLA_DEFAULT_ENGINE_ID=codex
 # Optional when you want to override config/agents.yaml:
-# DEVGODZILLA_CODEX_MODEL=gpt-4.1
+# DEVGODZILLA_CODEX_MODEL=gpt-5.4
 ```
 
 ### Codex CLI Auth
@@ -284,3 +284,8 @@ Codex. Re-authorize with an active account or use API-key auth:
 ```bash
 printenv OPENAI_API_KEY | codex login --with-api-key
 ```
+
+For ChatGPT login auth, use a model exposed by the Codex CLI for that account.
+The repo default is `gpt-5.4`; older API-style names such as `o4-mini` or
+`gpt-4.1` can return `model is not supported when using Codex with a ChatGPT
+account`.

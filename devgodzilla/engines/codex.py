@@ -32,7 +32,7 @@ class CodexEngine(CLIEngine):
     Supports planning, execution, and QA modes.
     
     Example:
-        engine = CodexEngine(default_model="o4-mini")
+        engine = CodexEngine(default_model="gpt-5.4")
         result = engine.execute(request)
     """
 
@@ -44,7 +44,7 @@ class CodexEngine(CLIEngine):
     ) -> None:
         super().__init__(
             default_timeout=default_timeout,
-            default_model=default_model or os.environ.get("DEVGODZILLA_CODEX_MODEL", "o4-mini"),
+            default_model=default_model or os.environ.get("DEVGODZILLA_CODEX_MODEL", "gpt-5.4"),
         )
 
     @property

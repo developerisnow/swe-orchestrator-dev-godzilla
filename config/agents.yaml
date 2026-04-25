@@ -15,7 +15,7 @@ agents:
     - code_gen
     - code_review
     command: codex
-    default_model: gpt-4.1
+    default_model: gpt-5.4
     enabled: true
     kind: cli
     name: OpenAI Codex

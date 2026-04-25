@@ -17,6 +17,15 @@ from devgodzilla.engines.interface import (
 class TestCodexEngine:
     """Tests for Codex CLI engine adapter."""
 
+    def test_codex_engine_default_model_matches_chatgpt_cli_default(self):
+        """Default Codex model should work with ChatGPT CLI auth by default."""
+        from devgodzilla.engines.codex import CodexEngine
+
+        with patch.dict(os.environ, {}, clear=True):
+            engine = CodexEngine()
+
+        assert engine.metadata.default_model == "gpt-5.4"
+
     def test_codex_engine_check_availability_with_api_key(self):
         """Codex is available when the binary exists and OPENAI_API_KEY is set."""
         from devgodzilla.engines.codex import CodexEngine
