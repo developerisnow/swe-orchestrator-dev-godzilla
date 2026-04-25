@@ -26,6 +26,18 @@ command_exists() {
   command -v "$1" >/dev/null 2>&1
 }
 
+run_pnpm() {
+  if command_exists pnpm; then
+    pnpm "$@"
+    return $?
+  fi
+  if command_exists corepack; then
+    corepack pnpm "$@"
+    return $?
+  fi
+  die "pnpm not found. Install pnpm or enable corepack before running frontend."
+}
+
 compose_cmd() {
   if command_exists docker && docker compose version >/dev/null 2>&1; then
     docker compose -f "$COMPOSE_FILE" "$@"
@@ -431,10 +443,9 @@ frontend_stop() {
 }
 
 run_frontend_foreground() {
-  command_exists pnpm || die "pnpm not found. Install pnpm before running frontend."
   export NEXT_PUBLIC_API_BASE_URL="${NEXT_PUBLIC_API_BASE_URL:-http://localhost:8080}"
   log "Starting frontend (Next.js) on :$FRONTEND_PORT"
-  (cd "$PROJECT_DIR/frontend" && pnpm exec next dev --hostname "$FRONTEND_HOSTNAME" --port "$FRONTEND_PORT")
+  (cd "$PROJECT_DIR/frontend" && run_pnpm exec next dev --hostname "$FRONTEND_HOSTNAME" --port "$FRONTEND_PORT")
 }
 
 windmill_import() {
@@ -557,7 +568,7 @@ run_dev() {
   echo "$backend_pid" >"$BACKEND_PID_FILE"
 
   clear_frontend_lock_if_safe
-  (cd "$PROJECT_DIR/frontend" && pnpm exec next dev --hostname "$FRONTEND_HOSTNAME" --port "$FRONTEND_PORT") &
+  (cd "$PROJECT_DIR/frontend" && run_pnpm exec next dev --hostname "$FRONTEND_HOSTNAME" --port "$FRONTEND_PORT") &
   frontend_pid=$!
 
   local server_pid=""
